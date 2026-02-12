@@ -3,253 +3,376 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fire på rad</title>
+    <title>Spillpakke: Fire på rad & 21 Pinner</title>
     <style>
         :root {
+            /* Felles variabler */
             --bg-color: #2c3e50;
-            --board-color: #34495e;
-            --slot-empty: #ecf0f1;
-            --p1-color: #e74c3c; /* Rød */
-            --p2-color: #f1c40f; /* Gul */
+            --panel-bg: #34495e;
             --text-color: #ecf0f1;
+            --highlight: #3498db;
             --shadow: 0 4px 6px rgba(0,0,0,0.3);
+            
+            /* Fire på rad farger */
+            --c4-p1: #e74c3c; /* Rød */
+            --c4-p2: #f1c40f; /* Gul */
+            
+            /* 21 Pinner farger */
+            --stick-color: #e67e22; /* Treverk-farge */
+            --stick-danger: #c0392b; /* Farlig pinne */
         }
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
+            margin: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
             min-height: 100vh;
-            margin: 0;
         }
 
-        h1 { margin-bottom: 10px; }
-
-        #status {
-            font-size: 1.2rem;
+        /* --- FANE-SYSTEM --- */
+        .tabs {
+            display: flex;
+            margin-top: 20px;
             margin-bottom: 20px;
+            background: var(--panel-bg);
+            padding: 5px;
+            border-radius: 50px;
+            box-shadow: var(--shadow);
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-color);
+            padding: 10px 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            border-radius: 40px;
+            transition: background 0.3s;
+        }
+
+        .tab-btn.active {
+            background-color: var(--highlight);
             font-weight: bold;
         }
 
-        /* Selve spillbrettet */
-        #game-board {
-            background-color: var(--board-color);
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: var(--shadow);
-            display: grid;
-            grid-template-columns: repeat(7, 60px); /* 7 kolonner */
-            grid-template-rows: repeat(6, 60px);    /* 6 rader */
-            gap: 10px;
+        .game-container {
+            display: none; /* Skjuler spill som ikke er valgt */
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 600px;
+            animation: fadeIn 0.5s;
         }
 
-        /* En enkelt rute */
-        .slot {
-            width: 60px;
-            height: 60px;
-            background-color: var(--slot-empty);
-            border-radius: 50%; /* Gjør den rund */
-            cursor: pointer;
-            box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
-            transition: background-color 0.1s;
-            position: relative;
+        .game-container.active {
+            display: flex;
         }
 
-        .slot:hover {
-            opacity: 0.8; /* Visuelt hint om at man kan klikke */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Animasjon når brikken faller */
-        .fall {
-            animation: bounce 0.5s ease-out;
+        h2 { margin-top: 0; }
+        .status-box {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            font-weight: bold;
+            min-height: 1.5em;
         }
 
-        @keyframes bounce {
-            0% { transform: translateY(-300px); opacity: 0; }
-            60% { transform: translateY(0); opacity: 1; }
-            80% { transform: translateY(-20px); }
-            100% { transform: translateY(0); }
-        }
-
-        /* Farger for spillerne */
-        .player1 { background-color: var(--p1-color); }
-        .player2 { background-color: var(--p2-color); }
-
-        #reset-btn {
-            margin-top: 20px;
+        /* Felles knappestil */
+        .action-btn {
+            margin: 10px;
             padding: 10px 20px;
             font-size: 1rem;
-            background-color: #27ae60;
-            color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
             box-shadow: var(--shadow);
             transition: transform 0.1s;
+            color: white;
+            background-color: var(--highlight);
+        }
+        .action-btn:hover { transform: scale(1.05); }
+        .action-btn:active { transform: scale(0.95); }
+        .reset-btn { background-color: #27ae60; margin-top: 20px;}
+
+        /* --- SPILL 1: FIRE PÅ RAD STILER --- */
+        #c4-board {
+            background-color: var(--panel-bg);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            display: grid;
+            grid-template-columns: repeat(7, 50px);
+            grid-template-rows: repeat(6, 50px);
+            gap: 8px;
+        }
+        .c4-slot {
+            width: 50px;
+            height: 50px;
+            background-color: #ecf0f1;
+            border-radius: 50%;
+            cursor: pointer;
+            position: relative;
+        }
+        .c4-p1 { background-color: var(--c4-p1); }
+        .c4-p2 { background-color: var(--c4-p2); }
+        
+        /* --- SPILL 2: 21 PINNER STILER --- */
+        #stick-area {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+            min-height: 150px;
+            perspective: 1000px;
         }
 
-        #reset-btn:hover { transform: scale(1.05); }
-        #reset-btn:active { transform: scale(0.95); }
+        .stick {
+            width: 15px;
+            height: 120px;
+            background: linear-gradient(90deg, #d35400, var(--stick-color) 40%, #d35400);
+            border-radius: 5px;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+            transition: all 0.4s ease;
+        }
+
+        /* Den siste pinnen (tap-pinnen) */
+        .stick.danger {
+            background: linear-gradient(90deg, #7f0000, var(--stick-danger) 40%, #7f0000);
+            border: 1px solid #e74c3c;
+        }
+
+        .stick.removed {
+            transform: translateY(-50px) rotate(20deg);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .stick-controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .stick-controls button:disabled {
+            background-color: #7f8c8d;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
 
     </style>
 </head>
 <body>
 
-    <h1>Fire på rad</h1>
-    <div id="status">Spiller 1 (Rød) sin tur</div>
-    
-    <div id="game-board"></div>
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('game1')">Fire på rad</button>
+        <button class="tab-btn" onclick="switchTab('game2')">21 Pinner</button>
+    </div>
 
-    <button id="reset-btn">Start nytt spill</button>
+    <div id="game1" class="game-container active">
+        <h2>Fire på rad</h2>
+        <div id="c4-status" class="status-box">Spiller 1 (Rød) sin tur</div>
+        <div id="c4-board"></div>
+        <button class="action-btn reset-btn" onclick="initConnect4()">Nytt parti</button>
+    </div>
+
+    <div id="game2" class="game-container">
+        <h2>Ikke ta den siste pinnen!</h2>
+        <div id="stick-status" class="status-box">Spiller 1 sin tur - Det er 21 pinner igjen</div>
+        
+        <div id="stick-area">
+            </div>
+
+        <div class="stick-controls">
+            <button class="action-btn" id="btn-take-1" onclick="takeSticks(1)">Ta 1</button>
+            <button class="action-btn" id="btn-take-2" onclick="takeSticks(2)">Ta 2</button>
+            <button class="action-btn" id="btn-take-3" onclick="takeSticks(3)">Ta 3</button>
+        </div>
+
+        <button class="action-btn reset-btn" onclick="initSticksGame()">Start på nytt</button>
+    </div>
 
 <script>
-    // --- KONFIGURASJON ---
-    const ROWS = 6;
-    const COLS = 7;
-    const WIN_LENGTH = 4; // Endre til 5 hvis dere vil prøve "Fem på rad"
-    
-    // --- TILSTAND (Variabler som husker spillets status) ---
-    let currentPlayer = 1; // 1 = Rød, 2 = Gul
-    let board = []; // 2D array som holder styr på brikkene logisk
-    let gameActive = true;
+    // --- FANE LOGIKK ---
+    function switchTab(tabId) {
+        // Skjul alle spill
+        document.querySelectorAll('.game-container').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
 
-    // Henter HTML-elementer vi trenger
-    const boardElement = document.getElementById('game-board');
-    const statusElement = document.getElementById('status');
-    const resetBtn = document.getElementById('reset-btn');
+        // Vis valgt spill
+        document.getElementById(tabId).classList.add('active');
+        
+        // Marker knappen
+        const btnIndex = tabId === 'game1' ? 0 : 1;
+        document.querySelectorAll('.tab-btn')[btnIndex].classList.add('active');
+    }
 
-    // --- FUNKSJONER ---
+    /* =========================================
+       LOGIKK FOR SPILL 1: FIRE PÅ RAD
+       ========================================= */
+    const C4_ROWS = 6;
+    const C4_COLS = 7;
+    let c4_board = [];
+    let c4_currentPlayer = 1;
+    let c4_active = true;
 
-    // 1. Initialiser spillet (start)
-    function initGame() {
-        board = [];
-        gameActive = true;
-        currentPlayer = 1;
-        statusElement.innerText = "Spiller 1 (Rød) sin tur";
-        statusElement.style.color = "var(--text-color)";
-        boardElement.innerHTML = ''; // Tøm brettet visuelt
+    function initConnect4() {
+        c4_board = [];
+        c4_active = true;
+        c4_currentPlayer = 1;
+        document.getElementById('c4-status').innerText = "Spiller 1 (Rød) sin tur";
+        const boardEl = document.getElementById('c4-board');
+        boardEl.innerHTML = '';
 
-        // Bygg logisk brett (array) og visuelt brett (HTML)
-        for (let r = 0; r < ROWS; r++) {
+        for (let r = 0; r < C4_ROWS; r++) {
             let row = [];
-            for (let c = 0; c < COLS; c++) {
-                row.push(0); // 0 betyr tom rute
-
-                // Lag HTML-elementet for ruten
+            for (let c = 0; c < C4_COLS; c++) {
+                row.push(0);
                 const slot = document.createElement('div');
-                slot.classList.add('slot');
-                slot.dataset.row = r; // Lagre koordinater i HTML
-                slot.dataset.col = c;
-                
-                // Legg til klikk-hendelse (Vi sender med kolonnenummeret)
-                slot.addEventListener('click', () => dropPiece(c));
-                
-                boardElement.appendChild(slot);
+                slot.classList.add('c4-slot');
+                slot.onclick = () => dropPiece(c);
+                boardEl.appendChild(slot);
             }
-            board.push(row);
+            c4_board.push(row);
         }
     }
 
-    // 2. Håndter klikk (Slipp brikke)
     function dropPiece(col) {
-        if (!gameActive) return;
-
-        // Finn den nederste ledige raden i denne kolonnen
-        for (let r = ROWS - 1; r >= 0; r--) {
-            if (board[r][col] === 0) {
-                // Vi fant en ledig plass!
-                board[r][col] = currentPlayer; // Oppdater logisk brett
-
-                // Oppdater visuelt brett
-                const slots = document.querySelectorAll('.slot');
-                // Formel for å finne riktig div i gridet: (rad * antall_kolonner) + kolonne
-                const index = r * COLS + col;
-                const targetSlot = slots[index];
-
-                targetSlot.classList.add(currentPlayer === 1 ? 'player1' : 'player2');
-                targetSlot.classList.add('fall'); // Start animasjon
-
-                // Sjekk om noen vant
-                if (checkWin(r, col)) {
-                    statusElement.innerText = `Spiller ${currentPlayer} VANT! 🎉`;
-                    statusElement.style.color = currentPlayer === 1 ? 'var(--p1-color)' : 'var(--p2-color)';
-                    gameActive = false;
-                } else if (checkDraw()) {
-                    statusElement.innerText = "Uavgjort! Ingen flere trekk.";
-                    gameActive = false;
+        if (!c4_active) return;
+        for (let r = C4_ROWS - 1; r >= 0; r--) {
+            if (c4_board[r][col] === 0) {
+                c4_board[r][col] = c4_currentPlayer;
+                const slots = document.querySelectorAll('.c4-slot');
+                slots[r * C4_COLS + col].classList.add(c4_currentPlayer === 1 ? 'c4-p1' : 'c4-p2');
+                
+                if (checkConnect4Win(r, col)) {
+                    document.getElementById('c4-status').innerText = `Spiller ${c4_currentPlayer} VANT! 🎉`;
+                    c4_active = false;
                 } else {
-                    // Bytt tur
-                    currentPlayer = currentPlayer === 1 ? 2 : 1;
-                    statusElement.innerText = `Spiller ${currentPlayer} (${currentPlayer === 1 ? 'Rød' : 'Gul'}) sin tur`;
+                    c4_currentPlayer = c4_currentPlayer === 1 ? 2 : 1;
+                    document.getElementById('c4-status').innerText = `Spiller ${c4_currentPlayer} (${c4_currentPlayer === 1 ? 'Rød' : 'Gul'}) sin tur`;
                 }
-                return; // Avslutt funksjonen når brikken er lagt
+                return;
             }
         }
-        // Hvis løkken er ferdig uten return, er kolonnen full.
-        alert("Denne kolonnen er full!");
     }
 
-    // 3. Sjekk seier (Den vanskelige delen!)
-    function checkWin(r, c) {
-        const player = board[r][c];
-
-        // Sjekk alle retninger: [deltaRad, deltaKolonne]
-        const directions = [
-            [0, 1],  // Horisontalt
-            [1, 0],  // Vertikalt
-            [1, 1],  // Diagonalt ned mot høyre (\)
-            [1, -1]  // Diagonalt ned mot venstre (/)
-        ];
-
-        for (let [dr, dc] of directions) {
-            let count = 1; // Vi har allerede 1 brikke (den vi nettopp la)
-
-            // Sjekk "fremover" i retningen
-            for (let i = 1; i < WIN_LENGTH; i++) {
-                const newR = r + (dr * i);
-                const newC = c + (dc * i);
-                if (newR >= 0 && newR < ROWS && newC >= 0 && newC < COLS && board[newR][newC] === player) {
-                    count++;
-                } else {
-                    break;
-                }
-            }
-
-            // Sjekk "bakover" i retningen (motsatt vei)
-            for (let i = 1; i < WIN_LENGTH; i++) {
-                const newR = r - (dr * i);
-                const newC = c - (dc * i);
-                if (newR >= 0 && newR < ROWS && newC >= 0 && newC < COLS && board[newR][newC] === player) {
-                    count++;
-                } else {
-                    break;
-                }
-            }
-
-            if (count >= WIN_LENGTH) return true;
+    function checkConnect4Win(r, c) {
+        const p = c4_board[r][c];
+        const dirs = [[0,1], [1,0], [1,1], [1,-1]];
+        for (let [dr, dc] of dirs) {
+            let count = 1;
+            for (let i=1; i<4; i++) if(valid(r+dr*i, c+dc*i, p)) count++; else break;
+            for (let i=1; i<4; i++) if(valid(r-dr*i, c-dc*i, p)) count++; else break;
+            if (count >= 4) return true;
         }
         return false;
     }
-
-    // 4. Sjekk uavgjort (er brettet fullt?)
-    function checkDraw() {
-        for (let r = 0; r < ROWS; r++) {
-            for (let c = 0; c < COLS; c++) {
-                if (board[r][c] === 0) return false;
-            }
-        }
-        return true;
+    function valid(r, c, p) {
+        return r>=0 && r<C4_ROWS && c>=0 && c<C4_COLS && c4_board[r][c] === p;
     }
 
-    // Start knappen
-    resetBtn.addEventListener('click', initGame);
+    /* =========================================
+       LOGIKK FOR SPILL 2: 21 PINNER (NIM)
+       ========================================= */
+    let sticksLeft = 21;
+    let stickCurrentPlayer = 1;
+    let stickGameActive = true;
 
-    // Kjør spillet ved start
-    initGame();
+    function initSticksGame() {
+        sticksLeft = 21;
+        stickCurrentPlayer = 1;
+        stickGameActive = true;
+        updateStickStatus();
+        renderSticks();
+        toggleButtons(true);
+    }
+
+    function renderSticks() {
+        const container = document.getElementById('stick-area');
+        container.innerHTML = '';
+        
+        // Vi tegner pinnene. Pinne nr 1 (indeks 0) er den "farlige".
+        for (let i = 0; i < sticksLeft; i++) {
+            const stick = document.createElement('div');
+            stick.classList.add('stick');
+            
+            // Hvis det er den siste pinnen som står igjen (visuelt den første i rekka)
+            if (i === 0) {
+                stick.classList.add('danger');
+                stick.title = "IKKE TA DENNE!";
+            }
+            container.appendChild(stick);
+        }
+    }
+
+    function takeSticks(num) {
+        if (!stickGameActive) return;
+        if (num > sticksLeft) return; // Sikkerhet
+
+        // Fjern pinner visuelt først (animasjon)
+        const allSticks = document.querySelectorAll('.stick');
+        // Vi fjerner fra slutten av listen (høyre side)
+        for (let i = 0; i < num; i++) {
+            const indexToRemove = allSticks.length - 1 - i;
+            if (allSticks[indexToRemove]) {
+                allSticks[indexToRemove].classList.add('removed');
+            }
+        }
+
+        // Vent litt så animasjonen synes før vi oppdaterer logikken
+        setTimeout(() => {
+            sticksLeft -= num;
+            
+            // Sjekk tap/vinn
+            if (sticksLeft <= 0) {
+                // Den som tok den siste tapte
+                document.getElementById('stick-status').innerText = `Spiller ${stickCurrentPlayer} tok den siste pinnen og TAPTE! 😱`;
+                stickGameActive = false;
+                toggleButtons(false);
+                renderSticks(); // Oppdater visuelt for å fjerne dem helt
+            } else {
+                // Bytt spiller
+                stickCurrentPlayer = stickCurrentPlayer === 1 ? 2 : 1;
+                updateStickStatus();
+                renderSticks(); // Tegn opp på nytt med riktig antall
+                
+                // Deaktiver knapper hvis det er få pinner igjen
+                checkButtonAvailability();
+            }
+        }, 300);
+    }
+
+    function updateStickStatus() {
+        document.getElementById('stick-status').innerText = 
+            `Spiller ${stickCurrentPlayer} sin tur. Pinner igjen: ${sticksLeft}`;
+    }
+
+    function toggleButtons(enable) {
+        document.getElementById('btn-take-1').disabled = !enable;
+        document.getElementById('btn-take-2').disabled = !enable;
+        document.getElementById('btn-take-3').disabled = !enable;
+    }
+
+    function checkButtonAvailability() {
+        // Hvis det er f.eks. 2 pinner igjen, kan man ikke ta 3.
+        // Men i dette spillet må man ta minst 1.
+        // Hvis det er 2 igjen (1 vanlig + 1 farlig), kan man teknisk sett ta 2 og tape.
+        document.getElementById('btn-take-2').disabled = (sticksLeft < 2);
+        document.getElementById('btn-take-3').disabled = (sticksLeft < 3);
+    }
+
+    // Start opp begge spillene ved lasting
+    initConnect4();
+    initSticksGame();
 
 </script>
 
