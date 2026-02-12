@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fire på rad</title>
+    <style>
+        :root {
+            --bg-color: #2c3e50;
+            --board-color: #34495e;
+            --slot-empty: #ecf0f1;
+            --p1-color: #e74c3c; /* Rød */
+            --p2-color: #f1c40f; /* Gul */
+            --text-color: #ecf0f1;
+            --shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        h1 { margin-bottom: 10px; }
+
+        #status {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        /* Selve spillbrettet */
+        #game-board {
+            background-color: var(--board-color);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            display: grid;
+            grid-template-columns: repeat(7, 60px); /* 7 kolonner */
+            grid-template-rows: repeat(6, 60px);    /* 6 rader */
+            gap: 10px;
+        }
+
+        /* En enkelt rute */
+        .slot {
+            width: 60px;
+            height: 60px;
+            background-color: var(--slot-empty);
+            border-radius: 50%; /* Gjør den rund */
+            cursor: pointer;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
+            transition: background-color 0.1s;
+            position: relative;
+        }
+
+        .slot:hover {
+            opacity: 0.8; /* Visuelt hint om at man kan klikke */
+        }
+
+        /* Animasjon når brikken faller */
+        .fall {
+            animation: bounce 0.5s ease-out;
+        }
+
+        @keyframes bounce {
+            0% { transform: translateY(-300px); opacity: 0; }
+            60% { transform: translateY(0); opacity: 1; }
+            80% { transform: translateY(-20px); }
+            100% { transform: translateY(0); }
+        }
+
+        /* Farger for spillerne */
+        .player1 { background-color: var(--p1-color); }
+        .player2 { background-color: var(--p2-color); }
+
+        #reset-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 1rem;
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            transition: transform 0.1s;
+        }
+
+        #reset-btn:hover { transform: scale(1.05); }
+        #reset-btn:active { transform: scale(0.95); }
+
+    </style>
+</head>
+<body>
+
+    <h1>Fire på rad</h1>
+    <div id="status">Spiller 1 (Rød) sin tur</div>
+    
+    <div id="game-board"></div>
+
+    <button id="reset-btn">Start nytt spill</button>
+
+<script>
+    // --- KONFIGURASJON ---
+    const ROWS = 6;
+    const COLS = 7;
+    const WIN_LENGTH = 4; // Endre til 5 hvis dere vil prøve "Fem på rad"
+    
+    // --- TILSTAND (Variabler som husker spillets status) ---
+    let currentPlayer = 1; // 1 = Rød, 2 = Gul
+    let board = []; // 2D array som holder styr på brikkene logisk
+    let gameActive = true;
+
+    // Henter HTML-elementer vi trenger
+    const boardElement = document.getElementById('game-board');
+    const statusElement = document.getElementById('status');
+    const resetBtn = document.getElementById('reset-btn');
+
+    // --- FUNKSJONER ---
+
+    // 1. Initialiser spillet (start)
+    function initGame() {
+        board = [];
+        gameActive = true;
+        currentPlayer = 1;
+        statusElement.innerText = "Spiller 1 (Rød) sin tur";
+        statusElement.style.color = "var(--text-color)";
+        boardElement.innerHTML = ''; // Tøm brettet visuelt
+
+        // Bygg logisk brett (array) og visuelt brett (HTML)
+        for (let r = 0; r < ROWS; r++) {
+            let row = [];
+            for (let c = 0; c < COLS; c++) {
+                row.push(0); // 0 betyr tom rute
+
+                // Lag HTML-elementet for ruten
+                const slot = document.createElement('div');
+                slot.classList.add('slot');
+                slot.dataset.row = r; // Lagre koordinater i HTML
+                slot.dataset.col = c;
+                
+                // Legg til klikk-hendelse (Vi sender med kolonnenummeret)
+                slot.addEventListener('click', () => dropPiece(c));
+                
+                boardElement.appendChild(slot);
+            }
+            board.push(row);
+        }
+    }
+
+    // 2. Håndter klikk (Slipp brikke)
+    function dropPiece(col) {
+        if (!gameActive) return;
+
+        // Finn den nederste ledige raden i denne kolonnen
+        for (let r = ROWS - 1; r >= 0; r--) {
+            if (board[r][col] === 0) {
+                // Vi fant en ledig plass!
+                board[r][col] = currentPlayer; // Oppdater logisk brett
+
+                // Oppdater visuelt brett
+                const slots = document.querySelectorAll('.slot');
+                // Formel for å finne riktig div i gridet: (rad * antall_kolonner) + kolonne
+                const index = r * COLS + col;
+                const targetSlot = slots[index];
+
+                targetSlot.classList.add(currentPlayer === 1 ? 'player1' : 'player2');
+                targetSlot.classList.add('fall'); // Start animasjon
+
+                // Sjekk om noen vant
+                if (checkWin(r, col)) {
+                    statusElement.innerText = `Spiller ${currentPlayer} VANT! 🎉`;
+                    statusElement.style.color = currentPlayer === 1 ? 'var(--p1-color)' : 'var(--p2-color)';
+                    gameActive = false;
+                } else if (checkDraw()) {
+                    statusElement.innerText = "Uavgjort! Ingen flere trekk.";
+                    gameActive = false;
+                } else {
+                    // Bytt tur
+                    currentPlayer = currentPlayer === 1 ? 2 : 1;
+                    statusElement.innerText = `Spiller ${currentPlayer} (${currentPlayer === 1 ? 'Rød' : 'Gul'}) sin tur`;
+                }
+                return; // Avslutt funksjonen når brikken er lagt
+            }
+        }
+        // Hvis løkken er ferdig uten return, er kolonnen full.
+        alert("Denne kolonnen er full!");
+    }
+
+    // 3. Sjekk seier (Den vanskelige delen!)
+    function checkWin(r, c) {
+        const player = board[r][c];
+
+        // Sjekk alle retninger: [deltaRad, deltaKolonne]
+        const directions = [
+            [0, 1],  // Horisontalt
+            [1, 0],  // Vertikalt
+            [1, 1],  // Diagonalt ned mot høyre (\)
+            [1, -1]  // Diagonalt ned mot venstre (/)
+        ];
+
+        for (let [dr, dc] of directions) {
+            let count = 1; // Vi har allerede 1 brikke (den vi nettopp la)
+
+            // Sjekk "fremover" i retningen
+            for (let i = 1; i < WIN_LENGTH; i++) {
+                const newR = r + (dr * i);
+                const newC = c + (dc * i);
+                if (newR >= 0 && newR < ROWS && newC >= 0 && newC < COLS && board[newR][newC] === player) {
+                    count++;
+                } else {
+                    break;
+                }
+            }
+
+            // Sjekk "bakover" i retningen (motsatt vei)
+            for (let i = 1; i < WIN_LENGTH; i++) {
+                const newR = r - (dr * i);
+                const newC = c - (dc * i);
+                if (newR >= 0 && newR < ROWS && newC >= 0 && newC < COLS && board[newR][newC] === player) {
+                    count++;
+                } else {
+                    break;
+                }
+            }
+
+            if (count >= WIN_LENGTH) return true;
+        }
+        return false;
+    }
+
+    // 4. Sjekk uavgjort (er brettet fullt?)
+    function checkDraw() {
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                if (board[r][c] === 0) return false;
+            }
+        }
+        return true;
+    }
+
+    // Start knappen
+    resetBtn.addEventListener('click', initGame);
+
+    // Kjør spillet ved start
+    initGame();
+
+</script>
+
+</body>
+</html>
